@@ -169,7 +169,7 @@ void handleSF(char* param) {
   }
   int value = atoi(param + 3);
   // bw xxxx set BW
-  if (value < 5 || value > 12) {
+  if (value < 6 || value > 12) {
     Serial.print("Invalid SF value: ");
     Serial.println(value);
     return;
