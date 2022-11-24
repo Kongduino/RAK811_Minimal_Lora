@@ -2,6 +2,10 @@
 
 The RAK811 *was* a hot product back when I discovered RAKwireless, as a customer, then a friend of the CEO and other team members. I have a few of them, in various frequency ranges (with a strong bias for 470 MHz), and still use them. They are loaded with an [AT firmware](https://downloads.rakwireless.com/LoRa/RAK811/Firmware/), which has been regularly updated until late 2020. So mostly I have been using these, whether the [Arduino shield](https://www.thethingsnetwork.org/docs/devices/rak811-wisnode-lora-module/) – which was discontinued, but you can find traces of it on the web – or the [breakout board](https://store.rakwireless.com/products/rak811-lpwan-breakout-module), as devices tethered to another machine, my Mac, some of my RPi, etc. I have a bunch of apps, from a Xojo GUI app to a headless Python script, that handle them well.
 
+![Shield](assets/Shield.jpg)
+
+![Breakout](assets/Breakout.jpg)
+
 When I joined I was told *You can't reprogram it*. Which of course I took the wrong way! Turns out, yeah, back then you needed Keil to program it and use the LoRaWAN stack. But since then, there's an [Arduino BSP for STM32 devices](https://github.com/stm32duino/Arduino_Core_STM32), and although it took a while, there is now a way to use the LoRa chip inside the RAK811, an SX1276, with your library of choice. For LoRa, I use Sandeep Mistry's library, which I know well and have patched to make it work slightly better. For this example to work, you don't need to use my version, but you do need to effect a small patch:
 
 Lines 109-110 in the original source code of the header file must be moved **before** `private` on line 97:
