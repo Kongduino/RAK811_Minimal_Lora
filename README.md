@@ -174,4 +174,10 @@ CBC Decoded: 48
 658 round / s
 ```
 
+AES has been added to the code, with `/pwd` to set up the key (16 bytes ASCII, or, preferred, 32 bytes hex-encoded binary). `/aes on` and `/aes off` turn the encryption on and off. The Iv is produced by the code every time, and sent with the ciphertext.
+
+I will add a command to set up the key for you, which it will show once in the Serial Monitor. You can set up the same key manually in other devices.
+
+
+
 That's it for now, but it is already quite usable for range tests. Happy LoRaWalks!

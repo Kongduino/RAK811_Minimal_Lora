@@ -1,3 +1,8 @@
+int16_t encryptCBC(uint8_t* myBuf, uint8_t olen, uint8_t* pKey, uint8_t* Iv);
+int16_t decryptCBC(uint8_t* myBuf, uint8_t olen, uint8_t* pKey, uint8_t* Iv);
+void fillRandom(uint8_t* x, size_t len);
+void hexDump(uint8_t* buf, uint16_t len);
+
 #define RegFrfMsb 0x06
 #define RegFrfMid 0x07
 #define RegFrfLsb 0x08
@@ -23,6 +28,7 @@ uint8_t myPWD[16] = {0};
 uint8_t myIV[16] = {0};
 char myName[32] = {0};
 uint8_t encBuf[256];
+char msg[128]; // general-use buffer
 
 void listenMode() {
   pinMode(RADIO_RF_CRX_RX, OUTPUT);
@@ -43,14 +49,40 @@ void sendMode() {
 
 void onReceive(int packetSize) {
   // received a packet
-  Serial.print("Received packet '");
-  // read packet
-  for (int i = 0; i < packetSize; i++) {
-    Serial.print((char)LoRa.read());
+  if (!needAES) {
+    Serial.print("Received packet '");
+    // read packet
+    for (int i = 0; i < packetSize; i++) {
+      Serial.print((char)LoRa.read());
+    }
+    // print RSSI of packet
+    Serial.print("' with RSSI ");
+    Serial.print(LoRa.packetRssi());
+    Serial.print(", and SNR ");
+    Serial.println(LoRa.packetSnr());
+  } else {
+    for (int i = 0; i < packetSize; i++) {
+      encBuf[i] = (uint8_t)LoRa.read();
+    }
+    Serial.print("Received packet, size: "); Serial.print(packetSize);
+    Serial.print(" with RSSI ");
+    Serial.print(LoRa.packetRssi());
+    Serial.print(", and SNR ");
+    Serial.println(LoRa.packetSnr());
+
+    hexDump(encBuf, packetSize);
+    if (packetSize < 32) {
+      Serial.println("Size is too small for a properly formatted packet!");
+      return;
+    }
+    memcpy(myIV, encBuf, 16);
+    uint16_t olen = packetSize - 16;
+    memcpy((uint8_t*)msg, encBuf + 16, olen);
+    decryptCBC((uint8_t*)msg, olen, myPWD, myIV);
+    uint8_t x = encBuf[olen - 1];
+    encBuf[olen - x] = 0;
+    Serial.println((char*)encBuf);
   }
-  // print RSSI of packet
-  Serial.print("' with RSSI ");
-  Serial.println(LoRa.packetRssi());
   LoRa.receive();
 }
 
@@ -124,45 +156,6 @@ void array2hex(uint8_t *buf, size_t sLen, char *x) {
   }
   x[n++] = 0;
 }
-
-// Included in LoRandom
-//void hexDump(uint8_t* buf, uint16_t len) {
-//  // Something similar to the Unix/Linux hexdump -C command
-//  // Pretty-prints the contents of a buffer, 16 bytes a row
-//  char alphabet[17] = "0123456789abcdef";
-//  uint16_t i, index;
-//  Serial.print(F("   +------------------------------------------------+ +----------------+\n"));
-//  Serial.print(F("   |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |\n"));
-//  for (i = 0; i < len; i += 16) {
-//    if (i % 128 == 0) Serial.print(F("   +------------------------------------------------+ +----------------+\n"));
-//    char s[] = "|                                                | |                |\n";
-//    // pre-formated line. We will replace the spaces with text when appropriate.
-//    uint8_t ix = 1, iy = 52, j;
-//    for (j = 0; j < 16; j++) {
-//      if (i + j < len) {
-//        uint8_t c = buf[i + j];
-//        // fastest way to convert a byte to its 2-digit hex equivalent
-//        s[ix++] = alphabet[(c >> 4) & 0x0F];
-//        s[ix++] = alphabet[c & 0x0F];
-//        ix++;
-//        if (c > 31 && c < 127) s[iy++] = c;
-//        else s[iy++] = '.'; // display ASCII code 0x20-0x7F or a dot.
-//      }
-//    }
-//    index = i / 16;
-//    // display line number then the text
-//    if (i < 256) Serial.write(' ');
-//    Serial.print(index, HEX); Serial.write('.');
-//    Serial.print(s);
-//  }
-//  Serial.print(F("   +------------------------------------------------+ +----------------+\n"));
-//}
-/*
-  Note: I have "customized" the LoRa library by moving
-  uint8_t readRegister(uint8_t address);
-  void writeRegister(uint8_t address, uint8_t value);
-  to public: in LoRa.h – as we need access to the registers, obviously.
-*/
 
 void writeRegister(uint8_t reg, uint8_t value) {
   LoRa.writeRegister(reg, value);

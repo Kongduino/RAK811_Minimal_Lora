@@ -5,6 +5,7 @@
 void handleHelp(char*);
 void handlePing(char*);
 void handleTextMsg(char*);
+void handleAESMsg(char *);
 void handleSettings(char*);
 void handleFreq(char*);
 void handleBW(char*);
@@ -14,12 +15,9 @@ void handleTX(char*);
 void handleAP(char*);
 void handleAES(char*);
 void handlePassword(char*);
-int16_t encryptCBC(uint8_t* myBuf, uint8_t olen, uint8_t* Iv);
-int16_t decryptCBC(uint8_t* myBuf, uint8_t olen, uint8_t* Iv);
 
 vector<string> userStrings;
 int cmdCount = 0;
-char msg[128]; // general-use buffer
 
 struct myCommand {
   void (*ptr)(char *); // Function pointer
@@ -88,11 +86,37 @@ void handleSettings(char *param) {
 void handlePing(char *param) {
   sendMode();
   delay(100);
-  strcpy(msg, "This is a not so short PING!");
-  handleTextMsg(msg);
+  memset(msg, 0, 128);
+  strcpy(msg, "This is a not so short PING from ");
+  strcpy(msg + 33, myName);
+  Serial.println(msg);
+  if (needAES) handleAESMsg(msg);
+  else handleTextMsg(msg);
   listenMode();
   lastPing = millis();
   // whether a manual ping or automatic
+}
+
+void handleAESMsg(char *what) {
+  fillRandom(myIV, 16);
+  Serial.println("IV:");
+  hexDump(myIV, 16);
+  int16_t ln = strlen(what);
+  int16_t olen = encryptCBC((uint8_t*)what, ln, myPWD, myIV);
+  sendMode();
+  delay(100);
+  Serial.println("Sending:");
+  hexDump(encBuf, olen);
+  uint32_t t0 = millis();
+  LoRa.beginPacket();
+  LoRa.write(myIV, 16);
+  LoRa.write(encBuf, olen);
+  LoRa.endPacket();
+  uint32_t t1 = millis();
+  Serial.print("Done! Time: ");
+  Serial.print(t1 - t0);
+  Serial.println(" ms.");
+  listenMode();
 }
 
 void handleTextMsg(char *what) {
@@ -324,10 +348,11 @@ void handleAES(char* param) {
     }
     if (strcmp("ON", sw) == 0) {
       needAES = true;
+      Serial.println("Turning AES ON");
       checkPWD();
     } else if (strcmp("OFF", sw) == 0) {
       needAES = false;
-      checkPWD();
+      Serial.println("Turning AES OFF");
     } else {
       Serial.print("Unknown parameter: "); Serial.println(sw);
     }
