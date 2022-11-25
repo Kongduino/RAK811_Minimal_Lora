@@ -176,8 +176,28 @@ CBC Decoded: 48
 
 AES has been added to the code, with `/pwd` to set up the key (16 bytes ASCII, or, preferred, 32 bytes hex-encoded binary). `/aes on` and `/aes off` turn the encryption on and off. The Iv is produced by the code every time, and sent with the ciphertext.
 
-I will add a command to set up the key for you, which it will show once in the Serial Monitor. You can set up the same key manually in other devices.
+```
+Evaluating: `/p`
+This is a not so short PING from RAK811_303847183432353737002500
+IV:
+   +------------------------------------------------+ +----------------+
+   |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |
+   +------------------------------------------------+ +----------------+
+ 0.|9a bb b0 dc 37 c5 dd c9 a7 93 22 34 68 87 ff 17 | |....7....."4h...|
+   +------------------------------------------------+ +----------------+
+Sending:
+   +------------------------------------------------+ +----------------+
+   |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |
+   +------------------------------------------------+ +----------------+
+ 0.|af bc 68 5f 31 00 ec 58 87 d0 f2 66 28 82 27 96 | |..h_1..X...f(.'.|
+ 1.|84 4a fc e0 28 89 72 94 89 6b 76 cf d1 aa cf 7c | |.J..(.r..kv....||
+ 2.|e4 f5 39 39 46 4e ff bb 04 b5 2c 25 7a 53 7b 0c | |..99FN....,%zS{.|
+ 3.|9f b6 19 f3 5a 08 cd 68 f5 72 06 d8 e6 a5 ac 4e | |....Z..h.r.....N|
+   +------------------------------------------------+ +----------------+
+Done! Time: 3288 ms.
+```
 
+I will add a command to set up the key for you, which it will show once in the Serial Monitor. You can set up the same key manually in other devices.
 
 
 That's it for now, but it is already quite usable for range tests. Happy LoRaWalks!
