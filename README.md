@@ -197,7 +197,14 @@ Sending:
 Done! Time: 3288 ms.
 ```
 
-I will add a command to set up the key for you, which it will show once in the Serial Monitor. You can set up the same key manually in other devices.
+I am using the empty `/pwd` command to set up the key for you, which it shows once in the Serial Monitor. You can set up the same key manually in other devices.
+
+```
+Evaluating: `/pwd`
+Key phrase created. Set it on other devices with:
+/pwd a38770ca5ed07edda523f92c5ab5d4c5
+You can now turn AES on with /AES on
+```
 
 ## UUID
 

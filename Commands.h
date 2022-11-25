@@ -312,7 +312,12 @@ void handlePassword(char* param) {
   int i = sscanf(param, "%*s %s", pwd);
   if (i == -1) {
     // no parameters
-    Serial.println("pwd: yeah right!");
+    fillRandom(myPWD, 16);
+    array2hex(myPWD, 16, msg);
+    msg[33] = 0;
+    Serial.print("Key phrase created. Set it on other devices with:\n/pwd ");
+    Serial.println(msg);
+    Serial.println("You can now turn AES on with /AES on");
     return;
   } else {
     // either 16 chars or 32 hex chars
