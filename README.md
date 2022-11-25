@@ -199,5 +199,8 @@ Done! Time: 3288 ms.
 
 I will add a command to set up the key for you, which it will show once in the Serial Monitor. You can set up the same key manually in other devices.
 
+## UUID
+
+At startup a UUID is set up using the `HAL_GetUIDw0/1/2()` functions of the STM32 HAL. To which is prepended `RAK811_`. This makes for a pretty unique 31-byte UUID.
 
 That's it for now, but it is already quite usable for range tests. Happy LoRaWalks!
