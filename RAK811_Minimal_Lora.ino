@@ -12,11 +12,13 @@ using namespace std;
 #include <LoRandom.h>
 
 int counter = 0;
-union converter {
+union uidConverter {
   char b[12];
   int32_t i[3];
 };
-union converter conv;
+
+// Uncomment the next line if you want to run the AES self-test
+//#define AES_Self_Test
 
 void setup() {
   Serial.begin(115200);
@@ -24,16 +26,18 @@ void setup() {
   cmdCount = sizeof(cmds) / sizeof(myCommand);
   Serial.println("RAK811 Minimal LoRa");
   Serial.print(" - cmdCount: "); Serial.println(cmdCount);
-  uint8_t UID[12],  ix = 0;
-  conv.i[ix++] = HAL_GetUIDw0();
-  conv.i[ix++] = HAL_GetUIDw1();
-  conv.i[ix] = HAL_GetUIDw2();
+
+  uint8_t UID[12];
+  union uidConverter conv;
+  conv.i[0] = HAL_GetUIDw0();
+  conv.i[1] = HAL_GetUIDw1();
+  conv.i[2] = HAL_GetUIDw2();
   memcpy(UID, conv.b, 12);
-  // hexDump(UID, 12);
   memset(myName, 0, 32);
   strcpy(myName, "RAK811_");
   array2hex(UID, 12, myName + 7);
   Serial.print(" - myName: "); Serial.println(myName);
+
   // https://github.com/stm32duino/wiki/wiki/lora
   pinMode(RADIO_XTAL_EN, OUTPUT); //Power LoRa module
   digitalWrite(RADIO_XTAL_EN, HIGH);
@@ -96,6 +100,7 @@ void setup() {
     memset(myPWD, 0, 16);
   }
 
+#if defined(AES_Self_Test)
   Serial.println("\n\nAES Test!");
   uint8_t pKey[16] = {0};
   uint8_t IV[16] = {0};
@@ -136,6 +141,7 @@ void setup() {
   Serial.println(olen);
   hexDump((unsigned char *)encBuf, olen);
   Serial.printf("%d round / s\n", counter);
+#endif
 
   listenMode();
 }
