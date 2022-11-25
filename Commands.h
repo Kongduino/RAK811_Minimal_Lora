@@ -1,24 +1,30 @@
 #include <stdio.h>
 #include <string.h>
+#include "aes.c"
 
 void handleHelp(char*);
 void handlePing(char*);
 void handleTextMsg(char*);
+void handleSettings(char*);
 void handleFreq(char*);
 void handleBW(char*);
 void handleSF(char*);
 void handleCR(char*);
+void handleTX(char*);
+void handleAP(char*);
+void handlePassword(char*);
+int16_t encryptCBC(uint8_t* myBuf, uint8_t olen, uint8_t* Iv);
+int16_t decryptCBC(uint8_t* myBuf, uint8_t olen, uint8_t* Iv);
 
 vector<string> userStrings;
 int cmdCount = 0;
 char msg[128]; // general-use buffer
-uint32_t myFreq = 470e6;
-uint16_t sf = 12;
-uint16_t bw = 7;
-uint16_t cr = 5;
-uint16_t preamble = 8;
-uint16_t txPower = 20;
-float myBWs[10] = {7.8, 10.4, 15.63, 20.83, 31.25, 41.67, 62.5, 125, 250, 500};
+bool needAES = false;
+bool needJSON = false;
+uint8_t myPWD[16] = {0};
+uint8_t myIV[16] = {0};
+char myName[32] = {0};
+uint8_t encBuf[256];
 
 struct myCommand {
   void (*ptr)(char *); // Function pointer
@@ -28,10 +34,13 @@ struct myCommand {
 
 myCommand cmds[] = {
   {handleHelp, "help", "Shows this help."},
+  {handleSettings, "lora", "Gets the current LoRa settings."},
   {handleFreq, "fq", "Gets/sets the working frequency."},
   {handleBW, "bw", "Gets/sets the working bandwidth."},
   {handleSF, "sf", "Gets/sets the Mspreading factor."},
   {handleCR, "cr", "Gets/sets the working coding rate."},
+  {handleTX, "tx", "Gets/sets the Transmission Power."},
+  {handleAP, "ap", "Gets/sets the auto-ping rate."},
   {handlePing, "p", "Sends a ping packet."},
 };
 
@@ -54,10 +63,6 @@ void evalCmd(char *str, string fullString) {
   Serial.print(fullString.c_str());
   Serial.println("`");
   for (int i = 0; i < cmdCount; i++) {
-    // Serial.print(" - ");
-    // Serial.print(cmds[i].name);
-    // Serial.print(" vs ");
-    // Serial.println(str);
     if (strcmp(str, cmds[i].name) == 0) {
       cmds[i].ptr((char*)fullString.c_str());
       return;
@@ -73,12 +78,24 @@ void handleCommands(string str1) {
   else handleTextMsg((char*)str1.c_str());
 }
 
+void handleSettings(char *param) {
+  Serial.println("Current settings:");
+  handleFreq("/fq");
+  handleBW("/bw");
+  handleSF("/sf");
+  handleCR("/cr");
+  handleTX("/tx");
+  handleAP("/ap");
+}
+
 void handlePing(char *param) {
   sendMode();
   delay(100);
   strcpy(msg, "This is a not so short PING!");
   handleTextMsg(msg);
   listenMode();
+  lastPing = millis();
+  // whether a manual ping or automatic
 }
 
 void handleTextMsg(char *what) {
@@ -100,7 +117,7 @@ void handleTextMsg(char *what) {
 void handleFreq(char *param) {
   if (strcmp("/fq", param) == 0) {
     // no parameters
-    Serial.print("Frequency: ");
+    Serial.print(" - Frequency: ");
     Serial.print(myFreq / 1e6);
     Serial.println(" MHz");
     return;
@@ -120,12 +137,9 @@ void handleFreq(char *param) {
     LoRa.sleep();
     LoRa.setFrequency(myFreq);
     listenMode();
-    //    unsigned char f0 = LoRa.readRegister(RegFrfLsb);
-    //    unsigned char f1 = LoRa.readRegister(RegFrfMid);
-    //    unsigned char f2 = LoRa.readRegister(RegFrfMsb);
-    //    unsigned long lfreq = f2; lfreq = (lfreq << 8) + f1; lfreq = (lfreq << 8) + f0;
-    //    float newFreq = (lfreq * 61.035) / 1000000;
-    //    Serial.print("Check: "); Serial.println(newFreq);
+#if defined(TRUST_BUT_VERIFY)
+    checkFreq();
+#endif
     return;
   }
 }
@@ -133,7 +147,7 @@ void handleFreq(char *param) {
 void handleBW(char* param) {
   if (strcmp("/bw", param) == 0) {
     // no parameters
-    Serial.print("BW: "); Serial.print(bw);
+    Serial.print(" - BW: "); Serial.print(bw);
     Serial.print(", ie "); Serial.print(myBWs[bw]); Serial.println("KHz");
     return;
   }
@@ -151,12 +165,7 @@ void handleBW(char* param) {
   Serial.print("BW set to "); Serial.print(bw);
   Serial.print(", ie "); Serial.print(myBWs[bw]); Serial.println(" KHz");
 #if defined(TRUST_BUT_VERIFY)
-  uint8_t vv = LoRa.readRegister(REG_MODEM_CONFIG_1);
-  uint8_t x = vv >> 4;
-  Serial.print(" . BW: " + String(x) + " [" + String((float)myBWs[x], 3) + " KHz]");
-  Serial.print(F(" ---> "));
-  if (bw == x) Serial.println(F("All good..."));
-  else Serial.println(F("Uh oh... Not a match!"));
+  checkBW();
 #endif
   return;
 }
@@ -164,7 +173,7 @@ void handleBW(char* param) {
 void handleSF(char* param) {
   if (strcmp("/sf", param) == 0) {
     // no parameters
-    Serial.print("SF: "); Serial.println(sf);
+    Serial.print(" - SF: "); Serial.println(sf);
     return;
   }
   int value = atoi(param + 3);
@@ -180,12 +189,7 @@ void handleSF(char* param) {
   listenMode();
   Serial.print("SF set to "); Serial.println(sf);
 #if defined(TRUST_BUT_VERIFY)
-  uint8_t vv = LoRa.readRegister(REG_MODEM_CONFIG_2);
-  uint8_t x = vv >> 4;
-  Serial.print(" . SF: " + String(x));
-  Serial.print(F(" ---> "));
-  if (sf == x) Serial.println(F("All good..."));
-  else Serial.println(F("Uh oh... Not a match!"));
+  checkSF();
 #endif
   return;
 }
@@ -193,7 +197,7 @@ void handleSF(char* param) {
 void handleCR(char* param) {
   if (strcmp("/cr", param) == 0) {
     // no parameters
-    Serial.print("CR 4/"); Serial.println(cr);
+    Serial.print(" - CR 4/"); Serial.println(cr);
     return;
   }
   int value = atoi(param + 3);
@@ -209,12 +213,7 @@ void handleCR(char* param) {
   listenMode();
   Serial.print("CR set to 4/"); Serial.println(cr);
 #if defined(TRUST_BUT_VERIFY)
-  uint8_t vv = LoRa.readRegister(REG_MODEM_CONFIG_1);
-  uint8_t x = ((vv & 0b00001110) >> 1) + 4;
-  Serial.print(" . CR: 4/" + String(x));
-  Serial.print(F(" ---> "));
-  if (cr == x) Serial.println(F("All good..."));
-  else Serial.println(F("Uh oh... Not a match!"));
+  checkCR();
 #endif
   return;
 }
@@ -222,13 +221,13 @@ void handleCR(char* param) {
 void handleTX(char* param) {
   if (strcmp("/tx", param) == 0) {
     // no parameters
-    Serial.print("Tx power: "); Serial.println(txPower);
+    Serial.print(" - Tx power: "); Serial.println(txPower);
     return;
   }
   int value = atoi(param + 3);
   // bw xxxx set BW
   if (value < 5 || value > 8) {
-    Serial.print("Invalid CR value: ");
+    Serial.print("Invalid Tx value: ");
     Serial.println(value);
     return;
   }
@@ -238,4 +237,78 @@ void handleTX(char* param) {
   listenMode();
   Serial.print("Tx power set to: "); Serial.println(txPower);
   return;
+}
+
+void handleAP(char* param) {
+  if (strcmp("/ap", param) == 0) {
+    // no parameters
+    Serial.print(" - AutoPING: ");
+    if (apFreq == 0) Serial.println("OFF.");
+    else {
+      Serial.print("ON, every ");
+      Serial.print(apFreq / 1000);
+      Serial.println(" secs.");
+    }
+    return;
+  }
+  uint32_t value = atoi(param + 3);
+  if (value > 0 && value < 10) {
+    Serial.println("Unless you want to turn if off (/ap 0), please pass a value of 10 seconds or more.");
+    return;
+  }
+  apFreq = value * 1e3;
+  Serial.print("AutoPING set to: ");
+  if (apFreq == 0) Serial.println("OFF.");
+  else {
+    Serial.print("ON, every ");
+    Serial.print(apFreq / 1000);
+    Serial.println(" secs.");
+    lastPing = millis();
+  }
+}
+
+int16_t encryptCBC(uint8_t* myBuf, uint8_t olen, uint8_t* pKey, uint8_t* Iv) {
+  uint8_t rounds = olen / 16;
+  if (rounds == 0) rounds = 1;
+  else if (olen - (rounds * 16) != 0) rounds += 1;
+  uint8_t length = rounds * 16;
+  memset(encBuf, (length - olen), length);
+  memcpy(encBuf, myBuf, olen);
+  struct AES_ctx ctx;
+  AES_init_ctx_iv(&ctx, pKey, Iv);
+  AES_CBC_encrypt_buffer(&ctx, encBuf, length);
+  return length;
+}
+
+int16_t decryptCBC(uint8_t* myBuf, uint8_t olen, uint8_t* pKey, uint8_t* Iv) {
+  memcpy(encBuf, myBuf, olen);
+  struct AES_ctx ctx;
+  AES_init_ctx_iv(&ctx, pKey, Iv);
+  AES_CBC_decrypt_buffer(&ctx, encBuf, olen);
+  return olen;
+}
+
+void handlePassword(char* param) {
+  char pwd[33];
+  memset(pwd, 0, 33);
+  int i = sscanf(param, "%*s %s", pwd);
+  if (i == -1) {
+    // no parameters
+    Serial.println("pwd: yeah right!");
+    return;
+  } else {
+    // either 16 chars or 32 hex chars
+    if (strlen(pwd) == 16) {
+      memcpy(myPWD, pwd, 16);
+      Serial.println("Password set from string.");
+      return;
+    } else if (strlen(pwd) == 32) {
+      hex2array(pwd, myPWD, 32);
+      Serial.println("Password set from hex string.");
+      Serial.println(msg);
+      return;
+    }
+    Serial.println("AES: wrong pwd size! It should be 16 bytes, or a 32-byte hex string!");
+    return;
+  }
 }

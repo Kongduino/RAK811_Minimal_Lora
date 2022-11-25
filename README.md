@@ -57,12 +57,15 @@ void sendMode() {
 This version of Minimal LoRa comes with a subset of the commands available in other versions. It does come with my new commands engine, which is way easier to use and extend.
 
 ```
-Available commands: 6
+Available commands: 9
  . help: Shows this help.
+ . lora: Gets the current LoRa settings.
  . fq: Gets/sets the working frequency.
  . bw: Gets/sets the working bandwidth.
  . sf: Gets/sets the Mspreading factor.
  . cr: Gets/sets the working coding rate.
+ . tx: Gets/sets the Transmission Power.
+ . ap: Gets/sets the auto-ping rate.
  . p: Sends a ping packet.
 ```
 
@@ -79,6 +82,48 @@ You can select independently any of the 10 BW values, `/bw 0` to `/bw 9`, and SF
 ## The `TRUST_BUT_VERIFY` directive
 
 If you have doubts about settings being applied properly, uncomment the `TRUST_BUT_VERIFY` define, in `LoRaHelper.h`, and recompile. When setting a new SF, BW, CR or frequency, the code will verify by reading the LoRa registers – hence the need, among other reasons, for the patch to the library...
+
+This is also used during startup, when setting up every parameter:
+
+```
+RAK811 Minimal LoRa
+ - cmdCount: 9
+ - Started LoRa @ 470.000 MHz.
+ - Frequency: 469.999 MHz ---> All good...
+   Frequency calculation is slightly imprecise...
+ - txPower: 20
+ - preamble: 8
+ - SF: 12
+ . SF: 12 ---> All good...
+ - BW: 7 / 125.00 KHz
+ . BW: 7 [125.000 KHz] ---> All good...
+ - CR 4/5
+ . CR: 4/5 ---> All good...
+```
+
+Note the calculation of the frequency from the SX1276's registers is a bit imprecise (floats and all that), so in that particular case I allow a variation of 1 Hz.
+
+## AUTO PING
+
+You can have the device send a PING automatically every x seconds (at least 10, but do try to space the PINGs out a little more than that). This is quite useful for testing: you set up one a static device to ping every minute, for example, and take another one (connected to a computer or else to get the information) and see whether the pings are coming in.
+
+```
+Evaluating: `/ap 30`
+AutoPING set to: ON, every 30 secs.
+Evaluating: `/lora`
+Current settings:
+ - Frequency: 470.00 MHz
+ - BW: 7, ie 125.00KHz
+ - SF: 12
+ - CR 4/5
+ - Tx power: 20
+ - AutoPING: ON, every 30 secs.
+Sending `This is a not so short PING!` done!
+Time: 1648 ms.
+```
+## LoRa settings
+
+The `lora` command shows all settings at once, as illustrated above.
 
 ## AES
 
