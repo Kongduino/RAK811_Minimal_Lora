@@ -52,7 +52,7 @@ void sendMode() {
   digitalWrite(RADIO_XTAL_EN, HIGH);
 ```
 
-## Minimal Lora Commands
+## Minimal LoRa Commands
 
 This version of Minimal LoRa comes with a subset of the commands available in other versions. It does come with my new commands engine, which is way easier to use and extend.
 
@@ -128,5 +128,49 @@ The `lora` command shows all settings at once, as illustrated above.
 ## AES
 
 I tested, separately, that AES worked on the RAK811 – no reason it shouldn't, but... – and will add commands to set up a key, Iv (NEVER reuse an Iv, or use a predictable Iv!), and switch AES on/off. HMAC could also be added at some point.
+
+At startup, the `setup()` code runs a small AES self-test.
+
+```
+AES Test!
+pKey:
+   +------------------------------------------------+ +----------------+
+   |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |
+   +------------------------------------------------+ +----------------+
+ 0.|5f 21 62 02 f8 e7 4c 4c a7 b7 69 ae 78 5f 21 d6 | |_!b...LL..i.x_!.|
+   +------------------------------------------------+ +----------------+
+IV:
+   +------------------------------------------------+ +----------------+
+   |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |
+   +------------------------------------------------+ +----------------+
+ 0.|5a 1f 38 d8 ae 80 4e 4b ad 2e 41 89 a3 62 08 2b | |Z.8...NK..A..b.+|
+   +------------------------------------------------+ +----------------+
+Plain Text:
+   +------------------------------------------------+ +----------------+
+   |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |
+   +------------------------------------------------+ +----------------+
+ 0.|48 65 6c 6c 6f 20 75 73 65 72 21 20 54 68 69 73 | |Hello user! This|
+ 1.|20 69 73 20 61 20 70 6c 61 69 6e 20 74 65 78 74 | | is a plain text|
+ 2.|20 73 74 72 69 6e 67 21 00                      | | string!.       |
+   +------------------------------------------------+ +----------------+
+CBC Encoded: 41 vs 48
+   +------------------------------------------------+ +----------------+
+   |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |
+   +------------------------------------------------+ +----------------+
+ 0.|71 17 8c b9 24 ee ad cc 39 fd 09 65 59 13 26 42 | |q...$...9..eY.&B|
+ 1.|2d 2a 27 c9 1c 63 42 5c c2 ae fe b1 52 5f a0 8f | |-*'..cB\....R_..|
+ 2.|af 79 5a ef 3b 14 46 19 46 9b 5e b1 a8 18 08 6a | |.yZ.;.F.F.^....j|
+   +------------------------------------------------+ +----------------+
+1101 round / s
+CBC Decoded: 48
+   +------------------------------------------------+ +----------------+
+   |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |
+   +------------------------------------------------+ +----------------+
+ 0.|48 65 6c 6c 6f 20 75 73 65 72 21 20 54 68 69 73 | |Hello user! This|
+ 1.|20 69 73 20 61 20 70 6c 61 69 6e 20 74 65 78 74 | | is a plain text|
+ 2.|20 73 74 72 69 6e 67 21 00 07 07 07 07 07 07 07 | | string!........|
+   +------------------------------------------------+ +----------------+
+659 round / s
+```
 
 That's it for now, but it is already quite usable for range tests. Happy LoRaWalks!
