@@ -9,6 +9,7 @@ using namespace std;
 #include <LoRa.h>
 #include "LoRaHelper.h"
 #include "Commands.h"
+#include <LoRandom.h>
 
 int counter = 0;
 
@@ -60,32 +61,35 @@ void setup() {
   Serial.print(" - BW: "); Serial.print(bw);
   Serial.print(" / "); Serial.print(myBWs[bw]); Serial.println(" KHz");
 #if defined(TRUST_BUT_VERIFY)
-    checkBW();
+  checkBW();
 #endif
   LoRa.setCodingRate4(cr);
   Serial.print(" - CR 4/"); Serial.println(cr);
 #if defined(TRUST_BUT_VERIFY)
-    checkCR();
+  checkCR();
 #endif
+
+  if (needAES) {
+    needAES = checkPWD();
+    if (!needAES) {
+      // if all zeroes, invalid password
+      Serial.println(" * Password is not set. Turning off AES!");
+    } else {
+      Serial.println(" * AES is on!");
+    }
+  } else {
+    memset(myPWD, 0, 16);
+  }
 
   Serial.println("\n\nAES Test!");
   uint8_t pKey[16] = {0};
   uint8_t IV[16] = {0};
   uint8_t pKeyLen = 16;
-  uint8_t randomBuff[64] = {
-    0x5f, 0x21, 0x62, 0x02, 0xf8, 0xe7, 0x4c, 0x4c,
-    0xa7, 0xb7, 0x69, 0xae, 0x78, 0x5f, 0x21, 0xd6,
-    0x5a, 0x1f, 0x38, 0xd8, 0xae, 0x80, 0x4e, 0x4b,
-    0xad, 0x2e, 0x41, 0x89, 0xa3, 0x62, 0x08, 0x2b,
-    0x6c, 0x59, 0xc9, 0x10, 0x7c, 0x09, 0x48, 0x03,
-    0x8c, 0x66, 0x36, 0xe6, 0x4e, 0xc8, 0x7b, 0x53,
-    0x53, 0x57, 0xd8, 0x59, 0x75, 0x3c, 0x4d, 0xd1,
-    0xa6, 0x63, 0x15, 0x8f, 0x81, 0x6b, 0x5b, 0x19
-  };
-  memcpy(pKey, randomBuff, 16);
+  Serial.println(" - Generating Random Numbers with LoRandom");
+  fillRandom(pKey, 16);
   Serial.println("pKey:");
   hexDump(pKey, 16);
-  memcpy(IV, randomBuff + 16, 16);
+  fillRandom(IV, 16);
   Serial.println("IV:");
   hexDump(IV, 16);
   strcpy(msg, (char*)"Hello user! This is a plain text string!");

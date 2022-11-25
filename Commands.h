@@ -12,6 +12,7 @@ void handleSF(char*);
 void handleCR(char*);
 void handleTX(char*);
 void handleAP(char*);
+void handleAES(char*);
 void handlePassword(char*);
 int16_t encryptCBC(uint8_t* myBuf, uint8_t olen, uint8_t* Iv);
 int16_t decryptCBC(uint8_t* myBuf, uint8_t olen, uint8_t* Iv);
@@ -19,12 +20,6 @@ int16_t decryptCBC(uint8_t* myBuf, uint8_t olen, uint8_t* Iv);
 vector<string> userStrings;
 int cmdCount = 0;
 char msg[128]; // general-use buffer
-bool needAES = false;
-bool needJSON = false;
-uint8_t myPWD[16] = {0};
-uint8_t myIV[16] = {0};
-char myName[32] = {0};
-uint8_t encBuf[256];
 
 struct myCommand {
   void (*ptr)(char *); // Function pointer
@@ -41,6 +36,8 @@ myCommand cmds[] = {
   {handleCR, "cr", "Gets/sets the working coding rate."},
   {handleTX, "tx", "Gets/sets the Transmission Power."},
   {handleAP, "ap", "Gets/sets the auto-ping rate."},
+  {handleAES, "aes", "Gets/sets the AES mode."},
+  {handlePassword, "pwd", "Gets/sets the AES password."},
   {handlePing, "p", "Sends a ping packet."},
 };
 
@@ -120,7 +117,6 @@ void handleFreq(char *param) {
     Serial.print(" - Frequency: ");
     Serial.print(myFreq / 1e6);
     Serial.println(" MHz");
-    return;
   } else {
     // fq xxx.xxx set frequency
     // float value = sscanf(param, "%*s %f", &value);
@@ -137,11 +133,10 @@ void handleFreq(char *param) {
     LoRa.sleep();
     LoRa.setFrequency(myFreq);
     listenMode();
-#if defined(TRUST_BUT_VERIFY)
-    checkFreq();
-#endif
-    return;
   }
+#if defined(TRUST_BUT_VERIFY)
+  checkFreq();
+#endif
 }
 
 void handleBW(char* param) {
@@ -149,25 +144,24 @@ void handleBW(char* param) {
     // no parameters
     Serial.print(" - BW: "); Serial.print(bw);
     Serial.print(", ie "); Serial.print(myBWs[bw]); Serial.println("KHz");
-    return;
+  } else {
+    int value = atoi(param + 3);
+    // bw xxxx set BW
+    if (value > 9) {
+      Serial.print("Invalid BW value: ");
+      Serial.println(value);
+      return;
+    }
+    bw = value;
+    LoRa.sleep();
+    LoRa.setSignalBandwidth(myBWs[bw] * 1e3);
+    listenMode();
+    Serial.print("BW set to "); Serial.print(bw);
+    Serial.print(", ie "); Serial.print(myBWs[bw]); Serial.println(" KHz");
   }
-  int value = atoi(param + 3);
-  // bw xxxx set BW
-  if (value > 9) {
-    Serial.print("Invalid BW value: ");
-    Serial.println(value);
-    return;
-  }
-  bw = value;
-  LoRa.sleep();
-  LoRa.setSignalBandwidth(myBWs[bw] * 1e3);
-  listenMode();
-  Serial.print("BW set to "); Serial.print(bw);
-  Serial.print(", ie "); Serial.print(myBWs[bw]); Serial.println(" KHz");
 #if defined(TRUST_BUT_VERIFY)
   checkBW();
 #endif
-  return;
 }
 
 void handleSF(char* param) {
@@ -175,23 +169,23 @@ void handleSF(char* param) {
     // no parameters
     Serial.print(" - SF: "); Serial.println(sf);
     return;
+  } else {
+    int value = atoi(param + 3);
+    // bw xxxx set BW
+    if (value < 6 || value > 12) {
+      Serial.print("Invalid SF value: ");
+      Serial.println(value);
+      return;
+    }
+    sf = value;
+    LoRa.sleep();
+    LoRa.setSpreadingFactor(sf);
+    listenMode();
+    Serial.print("SF set to "); Serial.println(sf);
   }
-  int value = atoi(param + 3);
-  // bw xxxx set BW
-  if (value < 6 || value > 12) {
-    Serial.print("Invalid SF value: ");
-    Serial.println(value);
-    return;
-  }
-  sf = value;
-  LoRa.sleep();
-  LoRa.setSpreadingFactor(sf);
-  listenMode();
-  Serial.print("SF set to "); Serial.println(sf);
 #if defined(TRUST_BUT_VERIFY)
   checkSF();
 #endif
-  return;
 }
 
 void handleCR(char* param) {
@@ -199,23 +193,23 @@ void handleCR(char* param) {
     // no parameters
     Serial.print(" - CR 4/"); Serial.println(cr);
     return;
+  } else {
+    int value = atoi(param + 3);
+    // bw xxxx set BW
+    if (value < 5 || value > 8) {
+      Serial.print("Invalid CR value: ");
+      Serial.println(value);
+      return;
+    }
+    cr = value;
+    LoRa.sleep();
+    LoRa.setCodingRate4(cr);
+    listenMode();
+    Serial.print("CR set to 4/"); Serial.println(cr);
   }
-  int value = atoi(param + 3);
-  // bw xxxx set BW
-  if (value < 5 || value > 8) {
-    Serial.print("Invalid CR value: ");
-    Serial.println(value);
-    return;
-  }
-  cr = value;
-  LoRa.sleep();
-  LoRa.setCodingRate4(cr);
-  listenMode();
-  Serial.print("CR set to 4/"); Serial.println(cr);
 #if defined(TRUST_BUT_VERIFY)
   checkCR();
 #endif
-  return;
 }
 
 void handleTX(char* param) {
@@ -310,5 +304,32 @@ void handlePassword(char* param) {
     }
     Serial.println("AES: wrong pwd size! It should be 16 bytes, or a 32-byte hex string!");
     return;
+  }
+}
+
+void handleAES(char* param) {
+  char sw[33];
+  memset(sw, 0, 33);
+  int i = sscanf(param, "%*s %s", sw);
+  if (i == -1) {
+    // no parameters
+    Serial.print("AES mode: ");
+    if (needAES) Serial.println("ON");
+    else Serial.println("OFF");
+    return;
+  } else {
+    for (i = 0; i < strlen(sw); i++) {
+      // UPPERCASE everything
+      if (sw[i] >= 'a' && sw[i] <= 'z') sw[i] -= 32;
+    }
+    if (strcmp("ON", sw) == 0) {
+      needAES = true;
+      checkPWD();
+    } else if (strcmp("OFF", sw) == 0) {
+      needAES = false;
+      checkPWD();
+    } else {
+      Serial.print("Unknown parameter: "); Serial.println(sw);
+    }
   }
 }

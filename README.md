@@ -129,21 +129,22 @@ The `lora` command shows all settings at once, as illustrated above.
 
 I tested, separately, that AES worked on the RAK811 – no reason it shouldn't, but... – and will add commands to set up a key, Iv (NEVER reuse an Iv, or use a predictable Iv!), and switch AES on/off. HMAC could also be added at some point.
 
-At startup, the `setup()` code runs a small AES self-test.
+At startup, the `setup()` code runs a small AES self-test. It is now using my [LoRandom library](https://github.com/Kongduino/LoRandom), which produces TRNG (or as T as possible anyway) through the RssiWideBand register of the LoRa chip.
 
 ```
 AES Test!
+ - Generating Random Numbers with LoRandom
 pKey:
    +------------------------------------------------+ +----------------+
    |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |
    +------------------------------------------------+ +----------------+
- 0.|5f 21 62 02 f8 e7 4c 4c a7 b7 69 ae 78 5f 21 d6 | |_!b...LL..i.x_!.|
+ 0.|9f 74 a0 44 f4 c8 a7 c4 e2 2e 57 81 69 cd a6 19 | |.t.D......W.i...|
    +------------------------------------------------+ +----------------+
 IV:
    +------------------------------------------------+ +----------------+
    |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |
    +------------------------------------------------+ +----------------+
- 0.|5a 1f 38 d8 ae 80 4e 4b ad 2e 41 89 a3 62 08 2b | |Z.8...NK..A..b.+|
+ 0.|70 7f b0 ea 07 33 bd 35 42 7f 2c f0 79 ca 49 dd | |p....3.5B.,.y.I.|
    +------------------------------------------------+ +----------------+
 Plain Text:
    +------------------------------------------------+ +----------------+
@@ -157,11 +158,11 @@ CBC Encoded: 41 vs 48
    +------------------------------------------------+ +----------------+
    |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |
    +------------------------------------------------+ +----------------+
- 0.|71 17 8c b9 24 ee ad cc 39 fd 09 65 59 13 26 42 | |q...$...9..eY.&B|
- 1.|2d 2a 27 c9 1c 63 42 5c c2 ae fe b1 52 5f a0 8f | |-*'..cB\....R_..|
- 2.|af 79 5a ef 3b 14 46 19 46 9b 5e b1 a8 18 08 6a | |.yZ.;.F.F.^....j|
+ 0.|8f 66 5e 5a 1b 51 87 61 fe 4c 52 6b 96 b6 0e 07 | |.f^Z.Q.a.LRk....|
+ 1.|a9 7b 88 7f 71 c9 d7 2a 25 12 64 bf 47 6a 08 0a | |.{..q..*%.d.Gj..|
+ 2.|3b 00 a2 75 90 f8 5d eb cd 04 fd 14 e4 4d bd 2f | |;..u..]......M./|
    +------------------------------------------------+ +----------------+
-1101 round / s
+1104 round / s
 CBC Decoded: 48
    +------------------------------------------------+ +----------------+
    |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |
@@ -170,7 +171,7 @@ CBC Decoded: 48
  1.|20 69 73 20 61 20 70 6c 61 69 6e 20 74 65 78 74 | | is a plain text|
  2.|20 73 74 72 69 6e 67 21 00 07 07 07 07 07 07 07 | | string!........|
    +------------------------------------------------+ +----------------+
-659 round / s
+658 round / s
 ```
 
 That's it for now, but it is already quite usable for range tests. Happy LoRaWalks!

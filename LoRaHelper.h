@@ -17,6 +17,12 @@ uint16_t cr = 5;
 uint16_t preamble = 8;
 uint16_t txPower = 20;
 float myBWs[10] = {7.8, 10.4, 15.63, 20.83, 31.25, 41.67, 62.5, 125, 250, 500};
+bool needAES = false;
+bool needJSON = false;
+uint8_t myPWD[16] = {0};
+uint8_t myIV[16] = {0};
+char myName[32] = {0};
+uint8_t encBuf[256];
 
 void listenMode() {
   pinMode(RADIO_RF_CRX_RX, OUTPUT);
@@ -89,6 +95,13 @@ void checkCR() {
   else Serial.println(F("Uh oh... Not a match!"));
 }
 
+bool checkPWD() {
+  uint8_t xCount = 0;
+  for (uint8_t i = 0; i < 16; i++) xCount += myPWD[i];
+  needAES = (xCount != 0);
+  return (xCount != 0);
+}
+
 void hex2array(char *src, uint8_t *dst, size_t sLen) {
   size_t i, n = 0;
   for (i = 0; i < sLen; i += 2) {
@@ -112,34 +125,48 @@ void array2hex(uint8_t *buf, size_t sLen, char *x) {
   x[n++] = 0;
 }
 
-void hexDump(uint8_t* buf, uint16_t len) {
-  // Something similar to the Unix/Linux hexdump -C command
-  // Pretty-prints the contents of a buffer, 16 bytes a row
-  char alphabet[17] = "0123456789abcdef";
-  uint16_t i, index;
-  Serial.print(F("   +------------------------------------------------+ +----------------+\n"));
-  Serial.print(F("   |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |\n"));
-  for (i = 0; i < len; i += 16) {
-    if (i % 128 == 0) Serial.print(F("   +------------------------------------------------+ +----------------+\n"));
-    char s[] = "|                                                | |                |\n";
-    // pre-formated line. We will replace the spaces with text when appropriate.
-    uint8_t ix = 1, iy = 52, j;
-    for (j = 0; j < 16; j++) {
-      if (i + j < len) {
-        uint8_t c = buf[i + j];
-        // fastest way to convert a byte to its 2-digit hex equivalent
-        s[ix++] = alphabet[(c >> 4) & 0x0F];
-        s[ix++] = alphabet[c & 0x0F];
-        ix++;
-        if (c > 31 && c < 127) s[iy++] = c;
-        else s[iy++] = '.'; // display ASCII code 0x20-0x7F or a dot.
-      }
-    }
-    index = i / 16;
-    // display line number then the text
-    if (i < 256) Serial.write(' ');
-    Serial.print(index, HEX); Serial.write('.');
-    Serial.print(s);
-  }
-  Serial.print(F("   +------------------------------------------------+ +----------------+\n"));
+// Included in LoRandom
+//void hexDump(uint8_t* buf, uint16_t len) {
+//  // Something similar to the Unix/Linux hexdump -C command
+//  // Pretty-prints the contents of a buffer, 16 bytes a row
+//  char alphabet[17] = "0123456789abcdef";
+//  uint16_t i, index;
+//  Serial.print(F("   +------------------------------------------------+ +----------------+\n"));
+//  Serial.print(F("   |.0 .1 .2 .3 .4 .5 .6 .7 .8 .9 .a .b .c .d .e .f | |      ASCII     |\n"));
+//  for (i = 0; i < len; i += 16) {
+//    if (i % 128 == 0) Serial.print(F("   +------------------------------------------------+ +----------------+\n"));
+//    char s[] = "|                                                | |                |\n";
+//    // pre-formated line. We will replace the spaces with text when appropriate.
+//    uint8_t ix = 1, iy = 52, j;
+//    for (j = 0; j < 16; j++) {
+//      if (i + j < len) {
+//        uint8_t c = buf[i + j];
+//        // fastest way to convert a byte to its 2-digit hex equivalent
+//        s[ix++] = alphabet[(c >> 4) & 0x0F];
+//        s[ix++] = alphabet[c & 0x0F];
+//        ix++;
+//        if (c > 31 && c < 127) s[iy++] = c;
+//        else s[iy++] = '.'; // display ASCII code 0x20-0x7F or a dot.
+//      }
+//    }
+//    index = i / 16;
+//    // display line number then the text
+//    if (i < 256) Serial.write(' ');
+//    Serial.print(index, HEX); Serial.write('.');
+//    Serial.print(s);
+//  }
+//  Serial.print(F("   +------------------------------------------------+ +----------------+\n"));
+//}
+/*
+  Note: I have "customized" the LoRa library by moving
+  uint8_t readRegister(uint8_t address);
+  void writeRegister(uint8_t address, uint8_t value);
+  to public: in LoRa.h – as we need access to the registers, obviously.
+*/
+
+void writeRegister(uint8_t reg, uint8_t value) {
+  LoRa.writeRegister(reg, value);
+}
+uint8_t readRegister(uint8_t reg) {
+  return LoRa.readRegister(reg);
 }
