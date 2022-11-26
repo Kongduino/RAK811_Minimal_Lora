@@ -99,6 +99,8 @@ THEN I can put it back on its base board...
 
 Doesn't work readily on either model, **BUT** I managed to make it work, a little, with the [BitBang_I2C library](https://github.com/bitbank2/BitBang_I2C), as shown above: the Arduino shield is running demo code from the [ss_oled library](https://github.com/bitbank2/ss_oled) (which uses BitBang_I2C, same guy). I needed to find two available pins, and went with `PA0` and `PA1`, which are available on both the Arduino Shield (P5 male headers) and the XBee (bottom right).
 
+The BitBang_I2C library is a bit rudimentary, so you won't be able to do as much as with the regular Wire library, and mimicking its features probably requires more work than I am willing to do, but I'll poke around. Creating a `TwoWire` object with the PA0/PA1 pins doesn't work either.
+
 ### On the XBee
 
 ![RAK811 Pinout](assets/RAK811_Pinout.png)
