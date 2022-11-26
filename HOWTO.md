@@ -97,7 +97,7 @@ THEN I can put it back on its base board...
 
 ## I2C
 
-Doesn't work readily on both models, **BUT** I managed to make it work, a little, with the [BitBang_I2C library](https://github.com/bitbank2/BitBang_I2C), as show above: the Arduino shield is running demo code from the [ss_oled library](https://github.com/bitbank2/ss_oled) (which uses BitBang_I2C, same guy). I needed to find two available pins, and went with `PA0` and `PA1`, which are available on both the Arduino Shield (P5 male headers) and the XBee (bottom right).
+Doesn't work readily on either model, **BUT** I managed to make it work, a little, with the [BitBang_I2C library](https://github.com/bitbank2/BitBang_I2C), as shown above: the Arduino shield is running demo code from the [ss_oled library](https://github.com/bitbank2/ss_oled) (which uses BitBang_I2C, same guy). I needed to find two available pins, and went with `PA0` and `PA1`, which are available on both the Arduino Shield (P5 male headers) and the XBee (bottom right).
 
 ### On the XBee
 
