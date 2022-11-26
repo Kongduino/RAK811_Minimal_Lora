@@ -67,3 +67,25 @@ Again these are pre-defined. For other libraries that require more pins, like LM
 
 With this you can run most examples of the LoRa lib without issues.
 
+## Uploading the Code
+
+The easiest is via JLink. Connect wires to the `TMS` (SWDIO), `CLK` (SDCLK), `RST`, `Vcc` and `GND` pins. In JFlash Lite, choose `STM32L151CB-A` for the MCU. Select the `.hex` file produced by Arduino IDE during compilation – I use a small app I made for Mac OS X, but you can pick up the file system path in the logs. Click on Program Device.
+
+![JFlash](assets/JFlash.png)
+
+### Arduino Shield
+
+I actually DON'T connect the Vcc pin on the Arduino Shield RAK811, as I keep the USB cable connected. So I can upload and see right away what's happening.
+
+![Shield_SWD](assets/Shield_SWD.jpg)
+
+### XBee Breakout
+
+On the XBee breakout I need to do a little more gymnastics.
+
+![XBee_Breakout](assets/XBee_Breakout.jpg)
+
+THEN I can put it back on its base board...
+
+![XBee_Baseboard](assets/XBee_Baseboard.jpg)
+
