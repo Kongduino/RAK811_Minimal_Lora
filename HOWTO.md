@@ -71,7 +71,13 @@ With this you can run most examples of the LoRa lib without issues.
 
 The easiest is via JLink. Connect wires to the `TMS` (SWDIO), `CLK` (SDCLK), `RST`, `Vcc` and `GND` pins. In JFlash Lite, choose `STM32L151CB-A` for the MCU. Select the `.hex` file produced by Arduino IDE during compilation – I use a small app I made for Mac OS X, but you can pick up the file system path in the logs. Click on Program Device.
 
+### JFlash Lite
+
 ![JFlash](assets/JFlash.png)
+
+### JLink pinout
+
+![Segger pinout](assets/Segger.png)
 
 ### Arduino Shield
 
