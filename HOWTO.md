@@ -21,7 +21,7 @@ The `RADIO_XTAL_EN` define is in the [variant file for the RAK811](https://githu
 There is another switch that controls sending and receiving. I wrote [two short functions](https://github.com/Kongduino/RAK811_Minimal_Lora/blob/master/LoRaHelper.h#L33-L48) that do this for you.
 
 ```c
-	void listenMode() {
+void listenMode() {
   pinMode(RADIO_RF_CRX_RX, OUTPUT);
   digitalWrite(RADIO_RF_CRX_RX, HIGH); // set LoRa to receive
   pinMode(RADIO_RF_CTX_PA, OUTPUT);
